@@ -11,31 +11,39 @@ import Pedidos from './pages/Pedidos'
 import Proveedores from './pages/Proveedores'
 import Configuracion from './pages/Configuracion'
 
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="maquinas" element={<Maquinas />} />
+        <Route path="repuestos" element={<Repuestos />} />
+        <Route path="movimientos" element={<Movimientos />} />
+        <Route path="pedidos" element={<Pedidos />} />
+        <Route path="proveedores" element={<Proveedores />} />
+        <Route path="configuracion" element={<Configuracion />} />
+      </Route>
+    </Routes>
+  )
+}
+
 function AppContent() {
   const { usuario } = useApp()
   if (!usuario) return <UserSelector />
   return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/maquinas" element={<Maquinas />} />
-          <Route path="/repuestos" element={<Repuestos />} />
-          <Route path="/movimientos" element={<Movimientos />} />
-          <Route path="/pedidos" element={<Pedidos />} />
-          <Route path="/proveedores" element={<Proveedores />} />
-          <Route path="/configuracion" element={<Configuracion />} />
-        </Routes>
-      </Layout>
+    <>
+      <AppRoutes />
       <ToastContainer />
-    </BrowserRouter>
+    </>
   )
 }
 
 export default function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AppProvider>
   )
 }
