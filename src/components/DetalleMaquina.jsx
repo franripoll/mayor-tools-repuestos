@@ -11,12 +11,13 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
   const [search, setSearch] = useState('')
 
   async function fetchData() {
+    const idsDocs = [maquina.id, maquina.parent_id].filter(Boolean)
     const [{ data: rm }, { data: docs }] = await Promise.all([
       supabase
         .from('repuesto_maquinas')
         .select('cantidad_recomendada, repuestos(*)')
         .eq('maquina_id', maquina.id),
-      supabase.from('maquina_documentos').select('*').eq('maquina_id', maquina.id),
+      supabase.from('maquina_documentos').select('*').in('maquina_id', idsDocs),
     ])
     setRepuestos(
       (rm || [])
@@ -68,22 +69,31 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
             <div style={{ marginBottom: 18 }}>
               <div className="form-label" style={{ marginBottom: 8 }}>Documentos</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {documentos.map(d => (
-                  <a
-                    key={d.id}
-                    href={d.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '8px 10px', background: 'var(--bg)',
-                      borderRadius: 6, border: '1px solid var(--border)',
-                      fontSize: 12, color: 'var(--accent)', textDecoration: 'none',
-                    }}
-                  >
-                    <FileText size={14} /> {d.nombre}
-                  </a>
-                ))}
+                {documentos.map(d => {
+                  const esHeredado = d.maquina_id !== maquina.id
+                  return (
+                    <a
+                      key={d.id}
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 10px', background: 'var(--bg)',
+                        borderRadius: 6, border: '1px solid var(--border)',
+                        fontSize: 12, color: 'var(--accent)', textDecoration: 'none',
+                      }}
+                    >
+                      <FileText size={14} style={{ flexShrink: 0 }} />
+                      <span style={{ flex: 1 }}>{d.nombre}</span>
+                      {esHeredado && (
+                        <span className="badge badge-neutral" style={{ flexShrink: 0 }}>
+                          {maquinasMap[maquina.parent_id]?.nombre || 'máquina principal'}
+                        </span>
+                      )}
+                    </a>
+                  )
+                })}
               </div>
             </div>
           )}
