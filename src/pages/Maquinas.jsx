@@ -2,13 +2,17 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Plus, Wrench, Edit2, ChevronDown, ChevronRight, Upload, FileText, X, GitBranch } from 'lucide-react'
+import DetalleMaquina from '../components/DetalleMaquina'
 
 export default function Maquinas() {
   const { toast } = useApp()
   const [maquinas, setMaquinas] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // null | 'new' | 'new-sub-{id}' | maquina
+  const [detalle, setDetalle] = useState(null)
   const [expandidas, setExpandidas] = useState({})
+
+  const maquinasMap = maquinas.reduce((acc, m) => { acc[m.id] = m; return acc }, {})
 
   async function fetchMaquinas() {
     const { data, error } = await supabase
@@ -46,18 +50,20 @@ export default function Maquinas() {
       <div style={{ marginBottom: nivel === 0 ? 8 : 0 }}>
         <div
           className="card"
+          onClick={() => setDetalle(maquina)}
           style={{
             marginLeft: nivel * 24,
             borderLeft: nivel > 0 ? `2px solid var(--accent)` : undefined,
             borderRadius: nivel > 0 ? '0 8px 8px 0' : 8,
             padding: '12px 14px',
             marginBottom: nivel > 0 ? 4 : 0,
+            cursor: 'pointer',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* Expand toggle */}
             <button
-              onClick={() => hasSubs && toggleExpand(maquina.id)}
+              onClick={e => { e.stopPropagation(); hasSubs && toggleExpand(maquina.id) }}
               style={{
                 background: 'none', border: 'none', cursor: hasSubs ? 'pointer' : 'default',
                 color: hasSubs ? 'var(--accent)' : 'transparent', padding: 2, flexShrink: 0,
@@ -110,13 +116,13 @@ export default function Maquinas() {
                 <button
                   className="btn btn-ghost"
                   style={{ padding: '4px 8px', fontSize: 11 }}
-                  onClick={() => setModal({ type: 'new-sub', parentId: maquina.id, parentNombre: maquina.nombre })}
+                  onClick={e => { e.stopPropagation(); setModal({ type: 'new-sub', parentId: maquina.id, parentNombre: maquina.nombre }) }}
                   title="Añadir parte/submáquina"
                 >
                   <Plus size={12} /> Parte
                 </button>
               )}
-              <button className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setModal({ type: 'edit', maquina })}>
+              <button className="btn btn-ghost" style={{ padding: 4 }} onClick={e => { e.stopPropagation(); setModal({ type: 'edit', maquina }) }}>
                 <Edit2 size={13} />
               </button>
             </div>
@@ -179,6 +185,14 @@ export default function Maquinas() {
             // Auto-expandir la máquina padre al añadir una parte
             if (modal.parentId) setExpandidas(prev => ({ ...prev, [modal.parentId]: true }))
           }}
+        />
+      )}
+
+      {detalle !== null && (
+        <DetalleMaquina
+          maquina={detalle}
+          maquinasMap={maquinasMap}
+          onClose={() => setDetalle(null)}
         />
       )}
     </div>
