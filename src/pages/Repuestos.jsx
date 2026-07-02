@@ -1,34 +1,49 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
-import { Plus, Search, Package, AlertTriangle, Edit2, ArrowLeftRight, Filter, X } from 'lucide-react'
+import { Plus, Search, Package, AlertTriangle, Edit2, ArrowLeftRight, Filter } from 'lucide-react'
 import ModalRepuesto from '../components/ModalRepuesto'
 import ModalMovimiento from '../components/ModalMovimiento'
 
 export default function Repuestos() {
   const { toast } = useApp()
   const [repuestos, setRepuestos] = useState([])
+  const [maquinasMap, setMaquinasMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filtroCritico, setFiltroCritico] = useState(false)
   const [filtroStockBajo, setFiltroStockBajo] = useState(false)
-  const [modalRepuesto, setModalRepuesto] = useState(null) // null | 'new' | repuesto
-  const [modalMovimiento, setModalMovimiento] = useState(null) // null | repuesto
+  const [modalRepuesto, setModalRepuesto] = useState(null)
+  const [modalMovimiento, setModalMovimiento] = useState(null)
 
   async function fetchRepuestos() {
-    let query = supabase
-      .from('repuestos')
-      .select('*, proveedores(nombre), repuesto_maquinas(maquinas(nombre))')
-      .eq('activo', true)
-      .order('nombre')
+    const [{ data: reps, error }, { data: maquinas }] = await Promise.all([
+      supabase
+        .from('repuestos')
+        .select('*, proveedores(nombre), repuesto_maquinas(maquina_id)')
+        .eq('activo', true)
+        .order('nombre'),
+      supabase.from('maquinas').select('id, nombre, parent_id'),
+    ])
+    if (error) { toast.error('Error al cargar repuestos'); setLoading(false); return }
 
-    const { data, error } = await query
-    if (error) toast.error('Error al cargar repuestos')
-    else setRepuestos(data || [])
+    const map = {}
+    ;(maquinas || []).forEach(m => { map[m.id] = m })
+    setMaquinasMap(map)
+    setRepuestos(reps || [])
     setLoading(false)
   }
 
   useEffect(() => { fetchRepuestos() }, [])
+
+  function rutaMaquina(maquinaId) {
+    const m = maquinasMap[maquinaId]
+    if (!m) return null
+    if (m.parent_id && maquinasMap[m.parent_id]) {
+      return `${maquinasMap[m.parent_id].nombre} › ${m.nombre}`
+    }
+    return m.nombre
+  }
 
   const filtered = repuestos.filter(r => {
     const matchSearch = r.nombre.toLowerCase().includes(search.toLowerCase()) ||
@@ -59,7 +74,6 @@ export default function Repuestos() {
         </button>
       </div>
 
-      {/* Buscador y filtros */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
@@ -84,7 +98,6 @@ export default function Repuestos() {
         </button>
       </div>
 
-      {/* Tabla */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
@@ -104,7 +117,7 @@ export default function Repuestos() {
                   <th>Nombre</th>
                   <th>Ref. fabricante</th>
                   <th>Ubicación</th>
-                  <th>Máquinas</th>
+                  <th>Máquina / Parte</th>
                   <th>Stock</th>
                   <th>Mínimo</th>
                   <th style={{ textAlign: 'center' }}>Estado</th>
@@ -123,10 +136,20 @@ export default function Repuestos() {
                     <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{r.referencia_fabricante || '—'}</td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{r.ubicacion_almacen || '—'}</td>
                     <td style={{ fontSize: 12 }}>
-                      {r.repuesto_maquinas?.length > 0
-                        ? r.repuesto_maquinas.map(rm => rm.maquinas?.nombre).filter(Boolean).join(', ')
-                        : <span style={{ color: 'var(--text-secondary)' }}>Almacén central</span>
-                      }
+                      {r.repuesto_maquinas?.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {r.repuesto_maquinas.map((rm, i) => {
+                            const ruta = rutaMaquina(rm.maquina_id)
+                            return ruta ? (
+                              <span key={i} className="badge badge-accent" style={{ width: 'fit-content' }}>
+                                {ruta}
+                              </span>
+                            ) : null
+                          })}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)' }}>Almacén central</span>
+                      )}
                     </td>
                     <td style={getStockStyle(r)}>{r.stock_actual}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{r.stock_minimo}</td>
@@ -156,7 +179,6 @@ export default function Repuestos() {
         )}
       </div>
 
-      {/* Modales */}
       {modalRepuesto !== null && (
         <ModalRepuesto
           repuesto={modalRepuesto === 'new' ? null : modalRepuesto}
