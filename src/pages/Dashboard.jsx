@@ -15,7 +15,7 @@ export default function Dashboard() {
       const [
         { count: totalRepuestos },
         { count: totalMaquinas },
-        { data: criticosBajos },
+        { data: todosRepuestos },
         { data: pedidos },
         { data: movimientos },
       ] = await Promise.all([
@@ -23,8 +23,7 @@ export default function Dashboard() {
         supabase.from('maquinas').select('*', { count: 'exact', head: true }).eq('activa', true),
         supabase.from('repuestos').select('id, nombre, stock_actual, stock_minimo, critico')
           .eq('activo', true)
-          .or('critico.eq.true,stock_actual.lte.stock_minimo')
-          .order('stock_actual'),
+          .order('stock_actual', { ascending: true }),
         supabase.from('pedidos').select('*, proveedores(nombre)')
           .in('estado', ['borrador', 'enviado', 'parcial'])
           .order('created_at', { ascending: false })
@@ -34,8 +33,14 @@ export default function Dashboard() {
           .limit(8),
       ])
 
+      // Filtramos en cliente: Supabase no permite comparar dos columnas
+      // directamente (stock_actual vs stock_minimo) en un filtro .or()
+      const criticosBajos = (todosRepuestos || []).filter(
+        r => r.critico || r.stock_actual <= r.stock_minimo
+      )
+
       setStats({ totalRepuestos, totalMaquinas })
-      setCriticos(criticosBajos || [])
+      setCriticos(criticosBajos)
       setPedidosPendientes(pedidos || [])
       setUltimosMovimientos(movimientos || [])
       setLoading(false)
