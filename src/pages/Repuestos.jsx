@@ -13,6 +13,7 @@ export default function Repuestos() {
   const [search, setSearch] = useState('')
   const [filtroCritico, setFiltroCritico] = useState(false)
   const [filtroStockBajo, setFiltroStockBajo] = useState(false)
+  const [filtroMaquina, setFiltroMaquina] = useState('')
   const [modalRepuesto, setModalRepuesto] = useState(null)
   const [modalMovimiento, setModalMovimiento] = useState(null)
 
@@ -45,13 +46,39 @@ export default function Repuestos() {
     return m.nombre
   }
 
+  // Opciones del selector: principales primero, sus partes indentadas debajo
+  const maquinasList = Object.values(maquinasMap)
+  const opcionesMaquina = maquinasList
+    .filter(m => !m.parent_id)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .flatMap(p => [
+      { id: p.id, label: p.nombre, indent: false },
+      ...maquinasList
+        .filter(m => m.parent_id === p.id)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre))
+        .map(s => ({ id: s.id, label: s.nombre, indent: true })),
+    ])
+
+  // Si se filtra por una máquina principal, incluimos también sus partes
+  const idsFiltro = (() => {
+    if (!filtroMaquina || filtroMaquina === '__none__') return null
+    const ids = new Set([filtroMaquina])
+    maquinasList.forEach(m => { if (m.parent_id === filtroMaquina) ids.add(m.id) })
+    return ids
+  })()
+
   const filtered = repuestos.filter(r => {
     const matchSearch = r.nombre.toLowerCase().includes(search.toLowerCase()) ||
       (r.referencia_fabricante || '').toLowerCase().includes(search.toLowerCase()) ||
       (r.referencia_interna || '').toLowerCase().includes(search.toLowerCase())
     const matchCritico = !filtroCritico || r.critico
     const matchStockBajo = !filtroStockBajo || r.stock_actual <= r.stock_minimo
-    return matchSearch && matchCritico && matchStockBajo
+    const matchMaquina = !filtroMaquina
+      ? true
+      : filtroMaquina === '__none__'
+        ? !(r.repuesto_maquinas?.length)
+        : r.repuesto_maquinas?.some(rm => idsFiltro.has(rm.maquina_id))
+    return matchSearch && matchCritico && matchStockBajo && matchMaquina
   })
 
   function getStockStyle(r) {
@@ -96,6 +123,19 @@ export default function Repuestos() {
         >
           <Filter size={14} /> Stock bajo
         </button>
+        <select
+          value={filtroMaquina}
+          onChange={e => setFiltroMaquina(e.target.value)}
+          style={{ flex: '0 0 auto', minWidth: 180, width: 'auto' }}
+        >
+          <option value="">Todas las máquinas</option>
+          <option value="__none__">Almacén central</option>
+          {opcionesMaquina.map(o => (
+            <option key={o.id} value={o.id}>
+              {o.indent ? '— ' : ''}{o.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
