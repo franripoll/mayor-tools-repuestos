@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { X, Package, FileText, ArrowLeftRight, AlertTriangle, Search } from 'lucide-react'
+import { X, Package, ArrowLeftRight, AlertTriangle, Search } from 'lucide-react'
 import ModalMovimiento from './ModalMovimiento'
+import { TIPO_DOC_INFO } from '../pages/Maquinas'
 
 export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
   const [repuestos, setRepuestos] = useState([])
@@ -71,6 +72,8 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {documentos.map(d => {
                   const esHeredado = d.maquina_id !== maquina.id
+                  const info = TIPO_DOC_INFO[d.tipo] || TIPO_DOC_INFO.otro
+                  const Icon = info.icon
                   return (
                     <a
                       key={d.id}
@@ -84,10 +87,11 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
                         fontSize: 12, color: 'var(--accent)', textDecoration: 'none',
                       }}
                     >
-                      <FileText size={14} style={{ flexShrink: 0 }} />
-                      <span style={{ flex: 1 }}>{d.nombre}</span>
+                      <Icon size={14} color={info.color} style={{ flexShrink: 0 }} />
+                      <span style={{ flex: 1, color: 'var(--text)' }}>{d.nombre}</span>
+                      <span className="badge badge-neutral" style={{ flexShrink: 0 }}>{info.label}</span>
                       {esHeredado && (
-                        <span className="badge badge-neutral" style={{ flexShrink: 0 }}>
+                        <span className="badge badge-accent" style={{ flexShrink: 0 }}>
                           {maquinasMap[maquina.parent_id]?.nombre || 'máquina principal'}
                         </span>
                       )}
