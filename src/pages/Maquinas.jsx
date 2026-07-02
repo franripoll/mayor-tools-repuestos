@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
-import { Plus, Wrench, Edit2, ChevronDown, ChevronRight, Upload, FileText, X, GitBranch } from 'lucide-react'
+import { Plus, Wrench, Edit2, ChevronDown, ChevronRight, Upload, FileText, X, GitBranch, Zap, Image, BookOpen, ClipboardList } from 'lucide-react'
+
+export const TIPO_DOC_INFO = {
+  plano: { label: 'Plano', icon: FileText, color: 'var(--accent)' },
+  esquema_electrico: { label: 'Esquema eléctrico', icon: Zap, color: 'var(--warning)' },
+  manual: { label: 'Manual', icon: BookOpen, color: 'var(--success)' },
+  ficha_tecnica: { label: 'Ficha técnica', icon: ClipboardList, color: 'var(--text-secondary)' },
+  foto: { label: 'Foto', icon: Image, color: 'var(--text-secondary)' },
+  otro: { label: 'Otro', icon: FileText, color: 'var(--text-secondary)' },
+}
 import DetalleMaquina from '../components/DetalleMaquina'
 
 export default function Maquinas() {
@@ -215,6 +224,7 @@ function ModalMaquina({ tipo, maquina, parentId, parentNombre, maquinasPrincipal
   const [loading, setLoading] = useState(false)
   const [documentos, setDocumentos] = useState([])
   const [docCargando, setDocCargando] = useState(false)
+  const [docTipo, setDocTipo] = useState('plano')
 
   useEffect(() => {
     if (maquina) {
@@ -234,11 +244,12 @@ function ModalMaquina({ tipo, maquina, parentId, parentNombre, maquinasPrincipal
     const { error: upErr } = await supabase.storage.from('maquina-documentos').upload(fileName, file)
     if (!upErr) {
       const { data: { publicUrl } } = supabase.storage.from('maquina-documentos').getPublicUrl(fileName)
-      const tipoDoc = ['pdf', 'dwg', 'dxf'].includes(ext.toLowerCase()) ? 'plano' : 'otro'
-      await supabase.from('maquina_documentos').insert({ maquina_id: maquina.id, tipo: tipoDoc, nombre: file.name, url: publicUrl })
+      await supabase.from('maquina_documentos').insert({ maquina_id: maquina.id, tipo: docTipo, nombre: file.name, url: publicUrl })
       const { data } = await supabase.from('maquina_documentos').select('*').eq('maquina_id', maquina.id)
       setDocumentos(data || [])
       toast.success('Documento subido')
+    } else {
+      toast.error('Error al subir el documento')
     }
     setDocCargando(false)
   }
@@ -353,33 +364,48 @@ function ModalMaquina({ tipo, maquina, parentId, parentNombre, maquinasPrincipal
 
           {maquina && (
             <div className="form-group">
-              <label className="form-label">Documentos / Planos</label>
+              <label className="form-label">Documentos</label>
               <div style={{ marginBottom: 8 }}>
-                {documentos.map(d => (
-                  <div key={d.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 10px', background: 'var(--bg)',
-                    borderRadius: 6, border: '1px solid var(--border)', marginBottom: 6,
-                  }}>
-                    <FileText size={14} color="var(--text-secondary)" />
-                    <a href={d.url} target="_blank" rel="noreferrer"
-                      style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', flex: 1 }}>
-                      {d.nombre}
-                    </a>
-                    <span className="badge badge-neutral">{d.tipo}</span>
-                  </div>
-                ))}
+                {documentos.map(d => {
+                  const info = TIPO_DOC_INFO[d.tipo] || TIPO_DOC_INFO.otro
+                  const Icon = info.icon
+                  return (
+                    <div key={d.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 10px', background: 'var(--bg)',
+                      borderRadius: 6, border: '1px solid var(--border)', marginBottom: 6,
+                    }}>
+                      <Icon size={14} color={info.color} />
+                      <a href={d.url} target="_blank" rel="noreferrer"
+                        style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', flex: 1 }}>
+                        {d.nombre}
+                      </a>
+                      <span className="badge badge-neutral">{info.label}</span>
+                    </div>
+                  )
+                })}
               </div>
-              <label style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', background: 'var(--surface)',
-                border: '1px solid var(--border)', borderRadius: 6,
-                cursor: 'pointer', fontSize: 13,
-              }}>
-                <Upload size={14} />
-                {docCargando ? 'Subiendo...' : 'Subir documento'}
-                <input type="file" onChange={handleDoc} style={{ display: 'none' }} disabled={docCargando} />
-              </label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <select
+                  value={docTipo}
+                  onChange={e => setDocTipo(e.target.value)}
+                  style={{ width: 'auto', minWidth: 160 }}
+                >
+                  {Object.entries(TIPO_DOC_INFO).map(([value, info]) => (
+                    <option key={value} value={value}>{info.label}</option>
+                  ))}
+                </select>
+                <label style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', background: 'var(--surface)',
+                  border: '1px solid var(--border)', borderRadius: 6,
+                  cursor: 'pointer', fontSize: 13,
+                }}>
+                  <Upload size={14} />
+                  {docCargando ? 'Subiendo...' : 'Subir documento'}
+                  <input type="file" onChange={handleDoc} style={{ display: 'none' }} disabled={docCargando} />
+                </label>
+              </div>
             </div>
           )}
         </div>
