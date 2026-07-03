@@ -16,13 +16,13 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
     const [{ data: rm }, { data: docs }] = await Promise.all([
       supabase
         .from('repuesto_maquinas')
-        .select('cantidad_recomendada, repuestos(*)')
+        .select('cantidad_recomendada, posicion, repuestos(*)')
         .eq('maquina_id', maquina.id),
       supabase.from('maquina_documentos').select('*').in('maquina_id', idsDocs),
     ])
     setRepuestos(
       (rm || [])
-        .map(r => (r.repuestos ? { ...r.repuestos, cantidad_recomendada: r.cantidad_recomendada } : null))
+        .map(r => (r.repuestos ? { ...r.repuestos, cantidad_recomendada: r.cantidad_recomendada, posicion: r.posicion } : null))
         .filter(Boolean)
     )
     setDocumentos(docs || [])
@@ -139,6 +139,11 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {r.posicion && (
+                        <span className="badge badge-neutral" style={{ flexShrink: 0, fontSize: 10 }}>
+                          {r.posicion}
+                        </span>
+                      )}
                       {r.nombre}
                       {r.critico && <AlertTriangle size={12} color="var(--danger)" />}
                     </div>
