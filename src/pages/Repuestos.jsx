@@ -21,7 +21,7 @@ export default function Repuestos() {
     const [{ data: reps, error }, { data: maquinas }] = await Promise.all([
       supabase
         .from('repuestos')
-        .select('*, proveedores(nombre), repuesto_maquinas(maquina_id)')
+        .select('*, proveedores(nombre), repuesto_maquinas(maquina_id, posicion)')
         .eq('activo', true)
         .order('nombre'),
       supabase.from('maquinas').select('id, nombre, parent_id'),
@@ -40,30 +40,52 @@ export default function Repuestos() {
   function rutaMaquina(maquinaId) {
     const m = maquinasMap[maquinaId]
     if (!m) return null
-    if (m.parent_id && maquinasMap[m.parent_id]) {
-      return `${maquinasMap[m.parent_id].nombre} › ${m.nombre}`
+    const partes = [m.nombre]
+    let actual = m
+    while (actual.parent_id && maquinasMap[actual.parent_id]) {
+      actual = maquinasMap[actual.parent_id]
+      partes.unshift(actual.nombre)
     }
-    return m.nombre
+    return partes.join(' › ')
   }
 
-  // Opciones del selector: principales primero, sus partes indentadas debajo
+  // Opciones del selector: recorre el árbol completo (soporta cualquier profundidad,
+  // no solo máquina → grupo, sino máquina → submáquina → grupo, etc.)
   const maquinasList = Object.values(maquinasMap)
-  const opcionesMaquina = maquinasList
-    .filter(m => !m.parent_id)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre))
-    .flatMap(p => [
-      { id: p.id, label: p.nombre, indent: false },
-      ...maquinasList
-        .filter(m => m.parent_id === p.id)
-        .sort((a, b) => a.nombre.localeCompare(b.nombre))
-        .map(s => ({ id: s.id, label: s.nombre, indent: true })),
-    ])
+  const opcionesMaquina = (() => {
+    const porPadre = {}
+    maquinasList.forEach(m => {
+      const key = m.parent_id || '__root__'
+      if (!porPadre[key]) porPadre[key] = []
+      porPadre[key].push(m)
+    })
+    Object.values(porPadre).forEach(arr => arr.sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    const opciones = []
+    function walk(parentKey, nivel) {
+      ;(porPadre[parentKey] || []).forEach(m => {
+        opciones.push({ id: m.id, label: m.nombre, nivel })
+        walk(m.id, nivel + 1)
+      })
+    }
+    walk('__root__', 0)
+    return opciones
+  })()
 
-  // Si se filtra por una máquina principal, incluimos también sus partes
+  // Si se filtra por una máquina, incluimos también TODAS sus descendientes
+  // (grupos, sub-grupos...), a cualquier profundidad.
   const idsFiltro = (() => {
     if (!filtroMaquina || filtroMaquina === '__none__') return null
     const ids = new Set([filtroMaquina])
-    maquinasList.forEach(m => { if (m.parent_id === filtroMaquina) ids.add(m.id) })
+    let seguirBuscando = true
+    while (seguirBuscando) {
+      seguirBuscando = false
+      maquinasList.forEach(m => {
+        if (m.parent_id && ids.has(m.parent_id) && !ids.has(m.id)) {
+          ids.add(m.id)
+          seguirBuscando = true
+        }
+      })
+    }
     return ids
   })()
 
@@ -132,7 +154,7 @@ export default function Repuestos() {
           <option value="__none__">Almacén central</option>
           {opcionesMaquina.map(o => (
             <option key={o.id} value={o.id}>
-              {o.indent ? '— ' : ''}{o.label}
+              {o.nivel > 0 ? '—'.repeat(o.nivel) + ' ' : ''}{o.label}
             </option>
           ))}
         </select>
@@ -181,9 +203,16 @@ export default function Repuestos() {
                           {r.repuesto_maquinas.map((rm, i) => {
                             const ruta = rutaMaquina(rm.maquina_id)
                             return ruta ? (
-                              <span key={i} className="badge badge-accent" style={{ width: 'fit-content' }}>
-                                {ruta}
-                              </span>
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span className="badge badge-accent" style={{ width: 'fit-content' }}>
+                                  {ruta}
+                                </span>
+                                {rm.posicion && (
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>
+                                    {rm.posicion}
+                                  </span>
+                                )}
+                              </div>
                             ) : null
                           })}
                         </div>
