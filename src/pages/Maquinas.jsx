@@ -235,19 +235,48 @@ function ModalMaquina({ tipo, maquina, parentId, parentNombre, maquinasPrincipal
 
   function set(f, v) { setForm(prev => ({ ...prev, [f]: v })) }
 
+  // Borra el archivo antiguo del storage a partir de su URL pública (best-effort:
+  // si falla no bloqueamos la subida del nuevo documento).
+  async function eliminarDocumentoStorage(url) {
+    try {
+      const marker = '/maquina-documentos/'
+      const idx = url.indexOf(marker)
+      if (idx === -1) return
+      const path = decodeURIComponent(url.slice(idx + marker.length))
+      await supabase.storage.from('maquina-documentos').remove([path])
+    } catch {
+      // no-op: si no se puede borrar el archivo viejo, seguimos igualmente
+    }
+  }
+
   async function handleDoc(e) {
     const file = e.target.files[0]
     if (!file || !maquina) return
     setDocCargando(true)
+
+    // Si ya hay un documento con el mismo nombre en esta máquina, lo sustituimos
+    // (no hay botón para borrar documentos a mano; esta es la única forma de reemplazarlos)
+    const { data: existentes } = await supabase
+      .from('maquina_documentos')
+      .select('id, url')
+      .eq('maquina_id', maquina.id)
+      .eq('nombre', file.name)
+
     const ext = file.name.split('.').pop()
     const fileName = `${maquina.id}-${Date.now()}.${ext}`
     const { error: upErr } = await supabase.storage.from('maquina-documentos').upload(fileName, file)
     if (!upErr) {
       const { data: { publicUrl } } = supabase.storage.from('maquina-documentos').getPublicUrl(fileName)
+
+      if (existentes && existentes.length > 0) {
+        await Promise.all(existentes.map(d => eliminarDocumentoStorage(d.url)))
+        await supabase.from('maquina_documentos').delete().in('id', existentes.map(d => d.id))
+      }
+
       await supabase.from('maquina_documentos').insert({ maquina_id: maquina.id, tipo: docTipo, nombre: file.name, url: publicUrl })
       const { data } = await supabase.from('maquina_documentos').select('*').eq('maquina_id', maquina.id)
       setDocumentos(data || [])
-      toast.success('Documento subido')
+      toast.success(existentes && existentes.length > 0 ? 'Documento sustituido' : 'Documento subido')
     } else {
       toast.error('Error al subir el documento')
     }
