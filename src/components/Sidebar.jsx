@@ -3,9 +3,7 @@ import { useApp } from '../context/AppContext'
 import {
   LayoutDashboard, Wrench, Package, Truck,
   ArrowLeftRight, ShoppingCart, Settings, LogOut,
-  Menu, X, ChevronRight
 } from 'lucide-react'
-import { useState } from 'react'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -19,7 +17,6 @@ const navItems = [
 
 export default function Sidebar() {
   const { usuario, setUsuario } = useApp()
-  const [mobileOpen, setMobileOpen] = useState(false)
 
   const rolLabels = { admin: 'Admin', mantenimiento: 'Mantenimiento', operario: 'Operario' }
 
@@ -53,7 +50,6 @@ export default function Sidebar() {
             key={to}
             to={to}
             end={end}
-            onClick={() => setMobileOpen(false)}
             style={({ isActive }) => ({
               display: 'flex',
               alignItems: 'center',
@@ -139,28 +135,14 @@ export default function Sidebar() {
           <span style={{ fontSize: 13, fontWeight: 600 }}>Repuestos</span>
         </div>
         <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', padding: 4 }}
+          onClick={() => setUsuario(null)}
+          title="Cambiar usuario"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          <span style={{ fontSize: 12 }}>{usuario?.nombre}</span>
+          <LogOut size={16} />
         </button>
       </div>
-
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 45 }}
-            onClick={() => setMobileOpen(false)}
-          />
-          <div style={{
-            position: 'fixed', top: 0, left: 0, bottom: 0,
-            width: 240, zIndex: 50,
-          }}>
-            <SidebarContent />
-          </div>
-        </>
-      )}
 
       <style>{`
         @media (min-width: 768px) {
