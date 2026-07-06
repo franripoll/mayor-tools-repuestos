@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Wrench, User, ChevronRight, Loader } from 'lucide-react'
 
 export default function UserSelector() {
   const { setUsuario } = useApp()
+  const navigate = useNavigate()
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -77,7 +79,11 @@ export default function UserSelector() {
           return (
             <button
               key={u.id}
-              onClick={() => setUsuario(u)}
+              onClick={() => {
+                setUsuario(u)
+                const esMobile = window.innerWidth < 768
+                navigate(esMobile && u.rol === 'operario' ? '/registrar' : '/')
+              }}
               style={{
                 width: '100%',
                 background: 'var(--surface)',
