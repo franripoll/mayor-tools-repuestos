@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Plus, Wrench, Edit2, ChevronDown, ChevronRight, Upload, FileText, X, GitBranch, Zap, Image, BookOpen, ClipboardList } from 'lucide-react'
@@ -15,11 +16,21 @@ import DetalleMaquina from '../components/DetalleMaquina'
 
 export default function Maquinas() {
   const { toast } = useApp()
+  const location = useLocation()
   const [maquinas, setMaquinas] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // null | 'new' | 'new-sub-{id}' | maquina
   const [detalle, setDetalle] = useState(null)
   const [expandidas, setExpandidas] = useState({})
+
+  // Si venimos de "Registrar" con una máquina elegida, abrimos su detalle directamente
+  useEffect(() => {
+    const focusId = location.state?.focusMaquinaId
+    if (focusId && maquinas.length > 0) {
+      const m = maquinas.find(x => x.id === focusId)
+      if (m) setDetalle(m)
+    }
+  }, [location.state, maquinas])
 
   const maquinasMap = maquinas.reduce((acc, m) => { acc[m.id] = m; return acc }, {})
 
