@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import ToastContainer from './components/ToastContainer'
 import UserSelector from './components/UserSelector'
 import Dashboard from './pages/Dashboard'
+import Registrar from './pages/Registrar'
 import Maquinas from './pages/Maquinas'
 import Repuestos from './pages/Repuestos'
 import Movimientos from './pages/Movimientos'
@@ -16,6 +17,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
+        <Route path="registrar" element={<Registrar />} />
         <Route path="maquinas" element={<Maquinas />} />
         <Route path="repuestos" element={<Repuestos />} />
         <Route path="movimientos" element={<Movimientos />} />
