@@ -59,7 +59,7 @@ export default function Repuestos() {
       if (!porPadre[key]) porPadre[key] = []
       porPadre[key].push(m)
     })
-    Object.values(porPadre).forEach(arr => arr.sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    Object.values(porPadre).forEach(arr => arr.sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' })))
     const opciones = []
     function walk(parentKey, nivel) {
       ;(porPadre[parentKey] || []).forEach(m => {
