@@ -34,6 +34,11 @@ export default function Maquinas() {
 
   const maquinasMap = maquinas.reduce((acc, m) => { acc[m.id] = m; return acc }, {})
 
+  // Orden "natural": entiende que 10 va después de 9, no entre el 1 y el 2
+  // (con orden alfabético de texto "10" sale antes que "2")
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+  function ordenNatural(a, b) { return collator.compare(a.nombre, b.nombre) }
+
   async function fetchMaquinas() {
     const { data, error } = await supabase
       .from('maquinas')
@@ -48,7 +53,7 @@ export default function Maquinas() {
   useEffect(() => { fetchMaquinas() }, [])
 
   // Separar principales y submáquinas
-  const principales = maquinas.filter(m => !m.parent_id)
+  const principales = maquinas.filter(m => !m.parent_id).sort(ordenNatural)
   const subMap = maquinas.reduce((acc, m) => {
     if (m.parent_id) {
       if (!acc[m.parent_id]) acc[m.parent_id] = []
@@ -56,6 +61,7 @@ export default function Maquinas() {
     }
     return acc
   }, {})
+  Object.values(subMap).forEach(arr => arr.sort(ordenNatural))
 
   function toggleExpand(id) {
     setExpandidas(prev => ({ ...prev, [id]: !prev[id] }))
