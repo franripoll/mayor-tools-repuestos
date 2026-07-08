@@ -12,6 +12,13 @@ export default function ModalMovimiento({ repuesto, onClose, onSaved }) {
   const [maquinas, setMaquinas] = useState([])
   const [loading, setLoading] = useState(false)
 
+  function fechaLocalActual() {
+    const d = new Date()
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    return d.toISOString().slice(0, 16)
+  }
+  const [fecha, setFecha] = useState(fechaLocalActual())
+
   useEffect(() => {
     async function fetchMaquinas() {
       // Si el repuesto tiene máquinas asociadas, las mostramos primero
@@ -51,6 +58,7 @@ export default function ModalMovimiento({ repuesto, onClose, onSaved }) {
         stock_anterior: repuesto.stock_actual,
         stock_posterior: stockResultante,
         notas: notas || null,
+        created_at: new Date(fecha).toISOString(),
       })
       if (error) throw error
       toast.success(`${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada correctamente`)
@@ -117,6 +125,16 @@ export default function ModalMovimiento({ repuesto, onClose, onSaved }) {
               value={cantidad}
               onChange={e => setCantidad(e.target.value)}
               style={{ fontSize: 18, textAlign: 'center', fontWeight: 600 }}
+            />
+          </div>
+
+          {/* Fecha */}
+          <div className="form-group">
+            <label className="form-label">Fecha y hora</label>
+            <input
+              type="datetime-local"
+              value={fecha}
+              onChange={e => setFecha(e.target.value)}
             />
           </div>
 
