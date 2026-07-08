@@ -19,7 +19,7 @@ export default function Movimientos() {
         .select('*, repuestos(nombre), maquinas(nombre), usuarios(nombre)')
         .order('created_at', { ascending: false })
         .limit(200),
-      supabase.from('repuestos').select('id, nombre').eq('activo', true).order('nombre'),
+      supabase.from('repuestos').select('id, nombre, referencia_fabricante, stock_actual, stock_minimo').eq('activo', true).order('nombre'),
     ])
     setMovimientos(movs || [])
     setRepuestos(reps || [])
@@ -154,7 +154,18 @@ export default function Movimientos() {
 
 function SelectorRepuestoModal({ repuestos, onSelect, onClose }) {
   const [search, setSearch] = useState('')
-  const filtered = repuestos.filter(r => r.nombre.toLowerCase().includes(search.toLowerCase()))
+  const q = search.toLowerCase()
+  const filtered = repuestos.filter(r =>
+    r.nombre.toLowerCase().includes(q) ||
+    (r.referencia_fabricante || '').toLowerCase().includes(q)
+  )
+
+  function stockColor(r) {
+    if (r.stock_actual <= 0) return 'var(--danger)'
+    if (r.stock_actual <= r.stock_minimo) return 'var(--alert)'
+    return 'var(--success)'
+  }
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 420 }}>
@@ -165,15 +176,26 @@ function SelectorRepuestoModal({ repuestos, onSelect, onClose }) {
         <div className="modal-body">
           <div style={{ position: 'relative', marginBottom: 12 }}>
             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar repuesto..." style={{ paddingLeft: 32 }} autoFocus />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nombre o código..." style={{ paddingLeft: 32 }} autoFocus />
           </div>
-          <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {filtered.map(r => (
               <button key={r.id} className="btn btn-secondary" onClick={() => onSelect(r)}
-                style={{ justifyContent: 'flex-start', textAlign: 'left' }}>
-                {r.nombre}
+                style={{ justifyContent: 'space-between', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</span>
+                  {r.referencia_fabricante && (
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)' }}>Ref. {r.referencia_fabricante}</span>
+                  )}
+                </span>
+                <span style={{ flexShrink: 0, fontWeight: 700, color: stockColor(r) }}>{r.stock_actual}</span>
               </button>
             ))}
+            {filtered.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, padding: 20 }}>
+                Sin resultados
+              </div>
+            )}
           </div>
         </div>
       </div>
