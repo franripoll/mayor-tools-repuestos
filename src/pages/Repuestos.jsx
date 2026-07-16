@@ -21,7 +21,7 @@ export default function Repuestos() {
     const [{ data: reps, error }, { data: maquinas }] = await Promise.all([
       supabase
         .from('repuestos')
-        .select('*, proveedores(nombre), repuesto_maquinas(maquina_id, posicion)')
+        .select('*, proveedores(nombre), repuesto_maquinas(maquina_id, posicion), repuesto_imagenes(url, es_principal)')
         .eq('activo', true)
         .order('nombre'),
       supabase.from('maquinas').select('id, nombre, parent_id'),
@@ -187,13 +187,25 @@ export default function Repuestos() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(r => (
+                {filtered.map(r => {
+                  const imagenPrincipal = r.repuesto_imagenes?.find(i => i.es_principal) || r.repuesto_imagenes?.[0]
+                  return (
                   <tr key={r.id}>
                     <td>
-                      <div style={{ fontWeight: 500 }}>{r.nombre}</div>
-                      {r.referencia_interna && (
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Ref. int: {r.referencia_interna}</div>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {imagenPrincipal ? (
+                          <img src={imagenPrincipal.url} alt=""
+                            style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: 32, height: 32, borderRadius: 6, background: 'var(--bg)', border: '1px solid var(--border)', flexShrink: 0 }} />
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{r.nombre}</div>
+                          {r.referencia_interna && (
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Ref. int: {r.referencia_interna}</div>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{r.referencia_fabricante || '—'}</td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{r.ubicacion_almacen || '—'}</td>
@@ -241,7 +253,8 @@ export default function Repuestos() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
