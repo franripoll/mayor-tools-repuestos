@@ -46,6 +46,17 @@ export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
         const { data: rm } = await supabase
           .from('repuesto_maquinas').select('maquina_id').eq('repuesto_id', repuesto.id)
         setMaquinasSeleccionadas((rm || []).map(r => r.maquina_id))
+
+        // Cargar la imagen ya guardada, si la hay
+        const { data: imgs } = await supabase
+          .from('repuesto_imagenes')
+          .select('id, url')
+          .eq('repuesto_id', repuesto.id)
+          .order('es_principal', { ascending: false })
+          .limit(1)
+        if (imgs && imgs.length > 0) {
+          setImagenPreview(imgs[0].url)
+        }
       }
     }
     fetchData()
@@ -118,15 +129,16 @@ export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
         )
       }
 
-      // Subir imagen si hay una nueva
+      // Subir imagen si hay una nueva (sustituye a la anterior, si existía)
       if (imagen) {
         const ext = imagen.name.split('.').pop()
         const fileName = `${repuestoId}-${Date.now()}.${ext}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('repuesto-imagenes')
           .upload(fileName, imagen, { upsert: true })
         if (!uploadError) {
           const { data: { publicUrl } } = supabase.storage.from('repuesto-imagenes').getPublicUrl(fileName)
+          await supabase.from('repuesto_imagenes').delete().eq('repuesto_id', repuestoId)
           await supabase.from('repuesto_imagenes').insert({
             repuesto_id: repuestoId, url: publicUrl, es_principal: true
           })
