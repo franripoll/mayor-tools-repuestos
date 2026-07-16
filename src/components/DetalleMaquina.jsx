@@ -16,7 +16,7 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
     const [{ data: rm }, { data: docs }] = await Promise.all([
       supabase
         .from('repuesto_maquinas')
-        .select('cantidad_recomendada, posicion, repuestos(*)')
+        .select('cantidad_recomendada, posicion, repuestos(*, repuesto_imagenes(url, es_principal))')
         .eq('maquina_id', maquina.id),
       supabase.from('maquina_documentos').select('*').in('maquina_id', idsDocs),
     ])
@@ -131,12 +131,20 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 360, overflowY: 'auto' }}>
-              {filtered.map(r => (
+              {filtered.map(r => {
+                const imagenPrincipal = r.repuesto_imagenes?.find(i => i.es_principal) || r.repuesto_imagenes?.[0]
+                return (
                 <div key={r.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '10px 12px', background: 'var(--bg)',
                   borderRadius: 6, border: '1px solid var(--border)',
                 }}>
+                  {imagenPrincipal ? (
+                    <img src={imagenPrincipal.url} alt=""
+                      style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 36, height: 36, borderRadius: 6, background: 'var(--surface)', border: '1px solid var(--border)', flexShrink: 0 }} />
+                  )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                       {r.posicion && (
@@ -163,7 +171,8 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
                     <ArrowLeftRight size={14} />
                   </button>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
