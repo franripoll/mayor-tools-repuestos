@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Search, Wrench, ChevronRight, Package, ArrowLeftRight } from 'lucide-react'
 import ModalMovimiento from '../components/ModalMovimiento'
+import ModalImagenGrande from '../components/ModalImagenGrande'
 
 export default function Registrar() {
   const { toast } = useApp()
@@ -14,6 +15,7 @@ export default function Registrar() {
   const [maquinasMap, setMaquinasMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [modalMovimiento, setModalMovimiento] = useState(null)
+  const [imagenGrande, setImagenGrande] = useState(null)
 
   async function fetchDatos() {
     const [{ data: reps, error }, { data: maqs }] = await Promise.all([
@@ -103,7 +105,8 @@ export default function Registrar() {
               >
                 {imagenPrincipal ? (
                   <img src={imagenPrincipal.url} alt=""
-                    style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                    onClick={e => { e.stopPropagation(); setImagenGrande(imagenPrincipal.url) }}
+                    style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} />
                 ) : (
                   <div style={{ width: 38, height: 38, borderRadius: 6, background: 'var(--bg)', border: '1px solid var(--border)', flexShrink: 0 }} />
                 )}
@@ -152,6 +155,9 @@ export default function Registrar() {
           onClose={() => setModalMovimiento(null)}
           onSaved={() => { setModalMovimiento(null); fetchDatos() }}
         />
+      )}
+      {imagenGrande && (
+        <ModalImagenGrande url={imagenGrande} onClose={() => setImagenGrande(null)} />
       )}
     </div>
   )
