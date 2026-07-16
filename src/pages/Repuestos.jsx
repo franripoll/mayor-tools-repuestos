@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { Plus, Search, Package, AlertTriangle, Edit2, ArrowLeftRight, Filter } from 'lucide-react'
 import ModalRepuesto from '../components/ModalRepuesto'
+import ModalImagenGrande from '../components/ModalImagenGrande'
 import ModalMovimiento from '../components/ModalMovimiento'
 
 export default function Repuestos() {
@@ -16,6 +17,7 @@ export default function Repuestos() {
   const [filtroMaquina, setFiltroMaquina] = useState('')
   const [modalRepuesto, setModalRepuesto] = useState(null)
   const [modalMovimiento, setModalMovimiento] = useState(null)
+  const [imagenGrande, setImagenGrande] = useState(null)
 
   async function fetchRepuestos() {
     const [{ data: reps, error }, { data: maquinas }] = await Promise.all([
@@ -195,7 +197,8 @@ export default function Repuestos() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {imagenPrincipal ? (
                           <img src={imagenPrincipal.url} alt=""
-                            style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                            onClick={() => setImagenGrande(imagenPrincipal.url)}
+                            style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} />
                         ) : (
                           <div style={{ width: 32, height: 32, borderRadius: 6, background: 'var(--bg)', border: '1px solid var(--border)', flexShrink: 0 }} />
                         )}
@@ -274,6 +277,9 @@ export default function Repuestos() {
           onClose={() => setModalMovimiento(null)}
           onSaved={() => { setModalMovimiento(null); fetchRepuestos() }}
         />
+      )}
+      {imagenGrande && (
+        <ModalImagenGrande url={imagenGrande} onClose={() => setImagenGrande(null)} />
       )}
     </div>
   )
