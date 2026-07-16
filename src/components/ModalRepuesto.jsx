@@ -136,12 +136,15 @@ export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
         const { error: uploadError } = await supabase.storage
           .from('repuesto-imagenes')
           .upload(fileName, imagen, { upsert: true })
-        if (!uploadError) {
+        if (uploadError) {
+          toast.error('No se pudo subir la imagen: ' + uploadError.message)
+        } else {
           const { data: { publicUrl } } = supabase.storage.from('repuesto-imagenes').getPublicUrl(fileName)
           await supabase.from('repuesto_imagenes').delete().eq('repuesto_id', repuestoId)
-          await supabase.from('repuesto_imagenes').insert({
+          const { error: imgError } = await supabase.from('repuesto_imagenes').insert({
             repuesto_id: repuestoId, url: publicUrl, es_principal: true
           })
+          if (imgError) toast.error('No se pudo guardar la imagen: ' + imgError.message)
         }
       }
 
