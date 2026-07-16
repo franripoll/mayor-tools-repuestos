@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
-import { X, Upload, Trash2 } from 'lucide-react'
+import { X, Upload, Trash2, Search, ChevronRight } from 'lucide-react'
 
 export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
   const { toast } = useApp()
@@ -22,7 +22,7 @@ export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
   useEffect(() => {
     async function fetchData() {
       const [{ data: maq }, { data: prov }] = await Promise.all([
-        supabase.from('maquinas').select('id, nombre').eq('activa', true).order('nombre'),
+        supabase.from('maquinas').select('id, nombre, parent_id').eq('activa', true).order('nombre'),
         supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
       ])
       setMaquinas(maq || [])
@@ -222,24 +222,11 @@ export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
           {/* Máquinas asociadas */}
           <div className="form-group">
             <label className="form-label">Máquinas asociadas</label>
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: 8,
-              padding: 12, background: 'var(--bg)', borderRadius: 6, border: '1px solid var(--border)',
-              maxHeight: 150, overflowY: 'auto',
-            }}>
-              {maquinas.length === 0 && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>No hay máquinas registradas</span>}
-              {maquinas.map(m => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => toggleMaquina(m.id)}
-                  className={`btn ${maquinasSeleccionadas.includes(m.id) ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '4px 10px', fontSize: 12 }}
-                >
-                  {m.nombre}
-                </button>
-              ))}
-            </div>
+            <SelectorMaquinasArbol
+              maquinas={maquinas}
+              seleccionadas={maquinasSeleccionadas}
+              onToggle={toggleMaquina}
+            />
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
               Sin selección = almacén central únicamente
             </div>
@@ -272,6 +259,122 @@ export default function ModalRepuesto({ repuesto, onClose, onSaved }) {
             {repuesto ? 'Guardar cambios' : 'Crear repuesto'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SelectorMaquinasArbol({ maquinas, seleccionadas, onToggle }) {
+  const [busqueda, setBusqueda] = useState('')
+  const [expandido, setExpandido] = useState({})
+
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+  const maquinasMap = {}
+  maquinas.forEach(m => { maquinasMap[m.id] = m })
+
+  const porPadre = {}
+  maquinas.forEach(m => {
+    const key = m.parent_id || '__root__'
+    if (!porPadre[key]) porPadre[key] = []
+    porPadre[key].push(m)
+  })
+  Object.values(porPadre).forEach(arr => arr.sort((a, b) => collator.compare(a.nombre, b.nombre)))
+
+  function ruta(m) {
+    const partes = [m.nombre]
+    let actual = m
+    while (actual.parent_id && maquinasMap[actual.parent_id]) {
+      actual = maquinasMap[actual.parent_id]
+      partes.unshift(actual.nombre)
+    }
+    return partes.join(' › ')
+  }
+
+  function toggleExpand(id) {
+    setExpandido(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  function renderNivel(parentKey, nivel) {
+    const hijos = porPadre[parentKey] || []
+    return hijos.map(m => {
+      const tieneHijos = !!porPadre[m.id]?.length
+      const expandida = !!expandido[m.id]
+      return (
+        <div key={m.id}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: nivel * 18 }}>
+            {tieneHijos ? (
+              <button
+                type="button"
+                onClick={() => toggleExpand(m.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-secondary)', display: 'flex', flexShrink: 0 }}
+              >
+                <ChevronRight size={14} style={{ transform: expandida ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
+              </button>
+            ) : (
+              <span style={{ width: 18, flexShrink: 0 }} />
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, cursor: 'pointer', fontSize: 12.5, padding: '4px 0' }}>
+              <input
+                type="checkbox"
+                checked={seleccionadas.includes(m.id)}
+                onChange={() => onToggle(m.id)}
+                style={{ width: 'auto' }}
+              />
+              <span>{m.nombre}</span>
+              {tieneHijos && (
+                <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>({porPadre[m.id].length})</span>
+              )}
+            </label>
+          </div>
+          {tieneHijos && expandida && renderNivel(m.id, nivel + 1)}
+        </div>
+      )
+    })
+  }
+
+  const q = busqueda.trim().toLowerCase()
+  const resultadosBusqueda = q
+    ? maquinas
+        .filter(m => m.nombre.toLowerCase().includes(q))
+        .sort((a, b) => collator.compare(ruta(a), ruta(b)))
+    : null
+
+  return (
+    <div>
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <Search size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+        <input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar máquina o grupo..."
+          style={{ paddingLeft: 26, fontSize: 12, height: 30 }}
+        />
+      </div>
+      <div style={{
+        maxHeight: 220, overflowY: 'auto',
+        padding: '8px 10px', background: 'var(--bg)', borderRadius: 6, border: '1px solid var(--border)',
+      }}>
+        {maquinas.length === 0 ? (
+          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>No hay máquinas registradas</span>
+        ) : resultadosBusqueda !== null ? (
+          resultadosBusqueda.length === 0 ? (
+            <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Sin resultados</span>
+          ) : (
+            resultadosBusqueda.map(m => (
+              <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, padding: '4px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={seleccionadas.includes(m.id)}
+                  onChange={() => onToggle(m.id)}
+                  style={{ width: 'auto' }}
+                />
+                <span>{ruta(m)}</span>
+              </label>
+            ))
+          )
+        ) : (
+          renderNivel('__root__', 0)
+        )}
       </div>
     </div>
   )
