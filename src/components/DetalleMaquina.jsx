@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { X, Package, ArrowLeftRight, AlertTriangle, Search } from 'lucide-react'
 import ModalMovimiento from './ModalMovimiento'
+import ModalImagenGrande from './ModalImagenGrande'
 import { TIPO_DOC_INFO } from '../pages/Maquinas'
 
 export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
@@ -9,6 +10,7 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
   const [documentos, setDocumentos] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalMovimiento, setModalMovimiento] = useState(null)
+  const [imagenGrande, setImagenGrande] = useState(null)
   const [search, setSearch] = useState('')
 
   async function fetchData() {
@@ -141,7 +143,8 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
                 }}>
                   {imagenPrincipal ? (
                     <img src={imagenPrincipal.url} alt=""
-                      style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                      onClick={() => setImagenGrande(imagenPrincipal.url)}
+                      style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0, cursor: 'pointer' }} />
                   ) : (
                     <div style={{ width: 36, height: 36, borderRadius: 6, background: 'var(--surface)', border: '1px solid var(--border)', flexShrink: 0 }} />
                   )}
@@ -188,6 +191,9 @@ export default function DetalleMaquina({ maquina, maquinasMap, onClose }) {
           onClose={() => setModalMovimiento(null)}
           onSaved={() => { setModalMovimiento(null); fetchData() }}
         />
+      )}
+      {imagenGrande && (
+        <ModalImagenGrande url={imagenGrande} onClose={() => setImagenGrande(null)} />
       )}
     </div>
   )
