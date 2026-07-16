@@ -19,7 +19,7 @@ export default function Registrar() {
     const [{ data: reps, error }, { data: maqs }] = await Promise.all([
       supabase
         .from('repuestos')
-        .select('*, repuesto_maquinas(maquina_id, posicion)')
+        .select('*, repuesto_maquinas(maquina_id, posicion), repuesto_imagenes(url, es_principal)')
         .eq('activo', true)
         .order('nombre'),
       supabase.from('maquinas').select('id, nombre, parent_id').eq('activa', true).order('nombre'),
@@ -89,7 +89,9 @@ export default function Registrar() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {resultados.map(r => (
+            {resultados.map(r => {
+              const imagenPrincipal = r.repuesto_imagenes?.find(i => i.es_principal) || r.repuesto_imagenes?.[0]
+              return (
               <button
                 key={r.id}
                 onClick={() => setModalMovimiento(r)}
@@ -99,6 +101,12 @@ export default function Registrar() {
                   textAlign: 'left', cursor: 'pointer', width: '100%',
                 }}
               >
+                {imagenPrincipal ? (
+                  <img src={imagenPrincipal.url} alt=""
+                    style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 38, height: 38, borderRadius: 6, background: 'var(--bg)', border: '1px solid var(--border)', flexShrink: 0 }} />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 500, fontSize: 14 }}>{r.nombre}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -111,7 +119,8 @@ export default function Registrar() {
                 <span style={{ fontSize: 15, ...getStockStyle(r) }}>{r.stock_actual}</span>
                 <ArrowLeftRight size={16} color="var(--text-secondary)" />
               </button>
-            ))}
+              )
+            })}
           </div>
         )
       ) : (
